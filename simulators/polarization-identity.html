@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>极化恒等式动点</title>
+<style>
+:root{--bg:#f6f7f9;--fg:#1c2330;--mute:#5d6678;--card:#fff;--line:#d9dde6;--a:#1f5fd6;--r:#c9402b;--g:#1d8a5a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e6e9f0;--mute:#9aa3b5;--card:#1b212b;--line:#2d3544;--a:#6aa0ff;--r:#ff7f6a;--g:#4cc58f;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161d;--fg:#e6e9f0;--mute:#9aa3b5;--card:#1b212b;--line:#2d3544;--a:#6aa0ff;--r:#ff7f6a;--g:#4cc58f;color-scheme:dark}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:system-ui,"PingFang SC","Microsoft YaHei",sans-serif;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:640px;margin:0 auto;display:grid;gap:14px}
+h1{font-size:20px;margin:0;text-wrap:balance}
+p{margin:0;color:var(--mute);line-height:1.6;font-size:14px}
+canvas{width:100%;aspect-ratio:1/0.85;background:var(--card);border:1px solid var(--line);border-radius:8px;touch-action:none;cursor:grab}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.s{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;min-width:0}
+.s b{display:block;font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px}
+.s span{font-size:12px;color:var(--mute)}
+button{font:inherit;padding:8px 14px;border-radius:6px;border:1px solid var(--a);background:var(--a);color:var(--bg);cursor:pointer;justify-self:start}
+button:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+</style>
+</head>
+<body>
+<main>
+<h1>极化恒等式动点：正三角形中的最小值</h1>
+<p>正三角形 ABC 边长 2，M 为 BC 中点，N 为 AM 中点。P 在三角形内或边上，拖动 P，观察 PA·(PB+PC)。</p>
+<canvas id="c" width="640" height="544"></canvas>
+<div class="row">
+<div class="s"><span>PA·(PB+PC)</span><b id="v1"></b></div>
+<div class="s"><span>2|PN|² − 3/2（极化恒等式）</span><b id="v2"></b></div>
+<div class="s"><span>|PN|</span><b id="v3"></b></div>
+</div>
+<p>推导：PB+PC=2PM，所以原式=2PA·PM。由极化恒等式 PA·PM=PN²−¼AM²，AM²=3，得原式=2PN²−3/2。P 与 N 重合时取最小值 −3/2。</p>
+<button id="b">跳到最小点 N</button>
+</main>
+<script>
+const cv=document.getElementById('c'),g=cv.getContext('2d');
+const S3=Math.sqrt(3),A=[0,S3],B=[-1,0],C=[1,0],M=[0,0],N=[0,S3/2];
+let P=[0.5,0.3];
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const sc=190,ox=320,oy=470;
+const X=p=>[ox+p[0]*sc,oy-p[1]*sc], W=(x,y)=>[(x-ox)/sc,(oy-y)/sc];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]],dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
+function inTri(p){return p[1]>=0&&p[1]<=S3*(1-Math.abs(p[0]))+1e-9}
+function clamp(p){
+ if(inTri(p))return p;
+ let best=null,bd=1e9;
+ for(const [u,v] of [[A,B],[B,C],[C,A]]){
+  const d=sub(v,u),t=Math.max(0,Math.min(1,dot(sub(p,u),d)/dot(d,d)));
+  const q=[u[0]+d[0]*t,u[1]+d[1]*t],e=Math.hypot(p[0]-q[0],p[1]-q[1]);
+  if(e<bd){bd=e;best=q}
+ }
+ return best;
+}
+function arrow(a,b,col){
+ const [x1,y1]=X(a),[x2,y2]=X(b);g.strokeStyle=col;g.fillStyle=col;g.lineWidth=2;
+ g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+ const t=Math.atan2(y2-y1,x2-x1);g.beginPath();g.moveTo(x2,y2);
+ g.lineTo(x2-10*Math.cos(t-.4),y2-10*Math.sin(t-.4));g.lineTo(x2-10*Math.cos(t+.4),y2-10*Math.sin(t+.4));g.fill();
+}
+function dotAt(p,col,r,label,dx,dy){
+ const [x,y]=X(p);g.fillStyle=col;g.beginPath();g.arc(x,y,r,0,7);g.fill();
+ g.fillStyle=css('--fg');g.font='15px system-ui';g.fillText(label,x+dx,y+dy);
+}
+function draw(){
+ g.clearRect(0,0,640,544);
+ g.beginPath();[A,B,C].forEach((p,i)=>{const [x,y]=X(p);i?g.lineTo(x,y):g.moveTo(x,y)});g.closePath();
+ g.fillStyle=css('--bg');g.fill();g.strokeStyle=css('--mute');g.lineWidth=1.5;g.stroke();
+ g.setLineDash([5,5]);g.beginPath();g.moveTo(...X(A));g.lineTo(...X(M));g.stroke();g.setLineDash([]);
+ const PB=sub(B,P),PC=sub(C,P),PA=sub(A,P),sum=[PB[0]+PC[0],PB[1]+PC[1]];
+ arrow(P,A,css('--a'));arrow(P,B,css('--mute'));arrow(P,C,css('--mute'));
+ arrow(P,[P[0]+sum[0],P[1]+sum[1]],css('--r'));
+ dotAt(A,css('--fg'),4,'A',-5,-10);dotAt(B,css('--fg'),4,'B',-18,16);dotAt(C,css('--fg'),4,'C',8,16);
+ dotAt(M,css('--fg'),3,'M',6,16);dotAt(N,css('--g'),5,'N',8,-6);dotAt(P,css('--r'),7,'P',10,-8);
+ g.font='13px system-ui';g.fillStyle=css('--a');g.fillText('PA',12,22);
+ g.fillStyle=css('--r');g.fillText('PB+PC',48,22);
+ const v=dot(PA,sum),d=Math.hypot(P[0]-N[0],P[1]-N[1]);
+ v1.textContent=v.toFixed(3);v2.textContent=(2*d*d-1.5).toFixed(3);v3.textContent=d.toFixed(3);
+}
+const v1=document.getElementById('v1'),v2=document.getElementById('v2'),v3=document.getElementById('v3');
+function move(e){const r=cv.getBoundingClientRect(),k=640/r.width;P=clamp(W((e.clientX-r.left)*k,(e.clientY-r.top)*k));draw()}
+let drag=false;
+cv.addEventListener('pointerdown',e=>{drag=true;cv.setPointerCapture(e.pointerId);move(e)});
+cv.addEventListener('pointermove',e=>{if(drag)move(e)});
+cv.addEventListener('pointerup',()=>drag=false);
+document.getElementById('b').onclick=()=>{P=[...N];draw()};
+matchMedia('(prefers-color-scheme:dark)').addEventListener('change',draw);
+draw();
+</script>
+</body>
+</html>
